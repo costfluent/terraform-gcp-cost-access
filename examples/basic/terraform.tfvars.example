@@ -1,0 +1,2 @@
+project_id         = "my-billing-project"
+billing_dataset_id = "billing_export"
