@@ -1,6 +1,6 @@
 # terraform-gcp-cost-access
 
-Grants [Costfluent](https://costfluent.io) read-only access to one GCP billing export.
+Grants [Costfluent](https://costfluent.com) read-only access to one GCP billing export.
 
 The module creates a service account, allows it to run BigQuery jobs in the project, and grants it
 read access to your billing export dataset alone.
