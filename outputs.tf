@@ -1,36 +1,26 @@
 locals {
-  # The provider hands the key back as base64-encoded service account JSON.
-  service_account_key = jsondecode(base64decode(google_service_account_key.costfluent.private_key))
-
   # The credential field names are the contract Costfluent validates against
   # (ProviderDefinitions.Gcp.RequiredCredentialFields in the Costfluent backend). Renaming one here
   # breaks every connection made with this module; scripts/check-integration-contract.py asserts it.
+  # None of them authenticates: access comes from the dataset grant, not from these values.
   credentials = {
-    project_id       = var.project_id
-    client_email     = local.service_account_key.client_email
-    private_key      = local.service_account_key.private_key
-    bigquery_dataset = var.billing_dataset_id
+    billing_account_id = var.billing_account_id
+    project_id         = var.project_id
+    bigquery_dataset   = var.billing_dataset_id
   }
 }
 
 output "credentials" {
-  description = "Credential fields for the Costfluent GCP connection."
-  sensitive   = true
+  description = "Connection fields for the Costfluent GCP connection."
   value       = local.credentials
 }
 
-output "credentials_json" {
-  description = "The same credentials as a JSON object, ready to paste into Costfluent."
-  sensitive   = true
+output "connection_json" {
+  description = "The same fields as a JSON object."
   value       = jsonencode(local.credentials)
 }
 
-output "service_account_email" {
-  description = "Service account Costfluent authenticates as."
-  value       = google_service_account.costfluent.email
-}
-
 output "billing_dataset_id" {
-  description = "Dataset the service account was granted read access to."
-  value       = var.billing_dataset_id
+  description = "Dataset the Costfluent service account was granted read access to."
+  value       = google_bigquery_dataset_iam_member.bq_data_viewer.dataset_id
 }

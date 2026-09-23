@@ -1,2 +1,4 @@
-project_id         = "my-billing-project"
-billing_dataset_id = "billing_export"
+project_id                       = "my-billing-project"
+billing_dataset_id               = "billing_export"
+billing_account_id               = "012345-ABCDEF-678901"
+costfluent_service_account_email = "cfp-aaaaaaaaaaaaaaaaaaaaaaaaaa@costfluent-prod-connect.iam.gserviceaccount.com"
