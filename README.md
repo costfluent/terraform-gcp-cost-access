@@ -13,8 +13,8 @@ created in your cloud, and no secret ever leaves it.
 - Permission to set IAM policy on the billing export dataset.
 - A **Detailed usage cost** BigQuery billing export, in a US or EU multi-region dataset. Standard
   export does not carry the per-resource cost fields Costfluent needs. A dedicated project for the
-  export is recommended. Enable it under Billing > Billing export > BigQuery export; it takes a few
-  hours to start populating.
+  export is recommended. Enable it under **Billing → Billing export → BigQuery export**; it takes a
+  few hours to start populating.
 
 ## Setup
 
