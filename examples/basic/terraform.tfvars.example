@@ -4,3 +4,4 @@ billing_account_id               = "012345-ABCDEF-678901"
 costfluent_service_account_email = "cfp-aaaaaaaaaaaaaaaaaaaaaaaaaa@costfluent-prod-connect.iam.gserviceaccount.com"
 recommender_project_ids          = ["my-app-project"]
 carbon_dataset_id                = "carbon_footprint"
+cud_dataset_id                   = "cud_metadata"

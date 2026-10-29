@@ -29,3 +29,9 @@ variable "carbon_dataset_id" {
   type        = string
   default     = null
 }
+
+variable "cud_dataset_id" {
+  description = "Dataset holding the committed use discount metadata export, in the same project. Null grants none."
+  type        = string
+  default     = null
+}

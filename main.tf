@@ -1,9 +1,11 @@
 # Grants Costfluent read-only access to one GCP billing export in BigQuery, optionally to the Carbon
-# Footprint export beside it, and, on the projects you list, to their cost recommendations.
+# Footprint and committed use discount metadata exports beside it, and, on the projects you list, to
+# their cost recommendations.
 #
 # Costfluent provisions a service account for your organization in its own project and runs the
 # queries there, at its own cost. This module grants that account read on the billing export
-# dataset, on the carbon footprint dataset when carbon_dataset_id is set, and, for each project in
+# dataset, on the carbon footprint dataset when carbon_dataset_id is set, on the committed use
+# discount metadata dataset when cud_dataset_id is set, and, for each project in
 # recommender_project_ids, the three Recommender viewer roles below. No service account or key is
 # created in your cloud.
 
@@ -39,6 +41,17 @@ resource "google_bigquery_dataset_iam_member" "carbon_data_viewer" {
 
   project    = var.project_id
   dataset_id = var.carbon_dataset_id
+  role       = "roles/bigquery.dataViewer"
+  member     = "serviceAccount:${var.costfluent_service_account_email}"
+}
+
+# The committed use discount metadata export writes its cud_subscriptions_export table to a dataset
+# of its own in the billing export's project, which Costfluent reads with the same role.
+resource "google_bigquery_dataset_iam_member" "cud_data_viewer" {
+  count = var.cud_dataset_id == null ? 0 : 1
+
+  project    = var.project_id
+  dataset_id = var.cud_dataset_id
   role       = "roles/bigquery.dataViewer"
   member     = "serviceAccount:${var.costfluent_service_account_email}"
 }

@@ -7,6 +7,7 @@ module "costfluent" {
   costfluent_service_account_email = var.costfluent_service_account_email
   recommender_project_ids          = var.recommender_project_ids
   carbon_dataset_id                = var.carbon_dataset_id
+  cud_dataset_id                   = var.cud_dataset_id
 }
 
 output "connection_json" {
