@@ -1,12 +1,13 @@
 # terraform-gcp-cost-access
 
 Grants [Costfluent](https://costfluent.com) read-only access to one GCP billing export and,
-optionally, to its Carbon Footprint export and to the cost recommendations of the projects you list.
+optionally, to its Carbon Footprint and committed use discount metadata exports and to the cost
+recommendations of the projects you list.
 
 Costfluent provisions a service account for your organization in its own project and runs the
 BigQuery queries there, at its own cost. This module grants that account **BigQuery Data Viewer**
-on your billing export dataset and, when you name it, on your Carbon Footprint export dataset, and,
-on each project in `recommender_project_ids`, the Recommender
+on your billing export dataset and, when you name them, on your Carbon Footprint and committed use
+discount metadata export datasets, and, on each project in `recommender_project_ids`, the Recommender
 viewer roles for Compute, committed use discounts and Cloud SQL. No service account or key is
 created in your cloud, and no secret ever leaves it.
 
@@ -30,7 +31,11 @@ created in your cloud, and no secret ever leaves it.
    Costfluent read the projects' cost recommendations into **Savings**, list them in
    `recommender_project_ids`. To have Costfluent read the billing account's provider-reported
    carbon footprint, export it to BigQuery (**Carbon Footprint → Export**) into a dataset in the same
-   project and name that dataset in `carbon_dataset_id`.
+   project and name that dataset in `carbon_dataset_id`. To have Costfluent list the billing
+   account's spend-based committed use discounts, enable the committed use discount metadata export
+   (Preview, under **Billing → Billing export**; it needs Billing Account Administrator) into a new
+   dataset in the same project, since Google's export setup says not to use an existing one, and
+   name that dataset in `cud_dataset_id`.
 4. If your organization restricts sharing to allowed domains, allow the organization ID and
    customer ID Costfluent shows beside the email.
 5. Connect the billing account in Costfluent with the three values. One connection per billing
@@ -57,12 +62,15 @@ module "costfluent" {
 
   # Optional: read the Carbon Footprint export in this dataset of the same project.
   carbon_dataset_id = "carbon_footprint"
+
+  # Optional: read the committed use discount metadata export in this dataset of the same project.
+  cud_dataset_id = "cud_metadata"
 }
 ```
 
 Then enter the billing account ID, project and dataset in Costfluent > Integrations > GCP, or read
-them back with `terraform output connection_json`, and the carbon dataset, when you set one, with
-`terraform output settings`.
+them back with `terraform output connection_json`, and the carbon and committed use discount
+datasets, when you set them, with `terraform output settings`.
 
 ### Terraform only
 
@@ -82,10 +90,10 @@ module "costfluent" {
 }
 
 resource "costfluent_provider" "gcp" {
-  key         = "gcp"
-  name        = "GCP billing"
-  credentials = module.costfluent.credentials
-  settings    = module.costfluent.settings
+  key          = "gcp"
+  display_name = "GCP billing"
+  credentials  = module.costfluent.credentials
+  settings     = module.costfluent.settings
 
   depends_on = [module.costfluent]
 }
@@ -104,6 +112,7 @@ up to three minutes while Costfluent reports the dataset as not yet shared.
 | `costfluent_service_account_email` | The service account Costfluent provisioned for your organization. | `string` | required |
 | `recommender_project_ids` | Projects whose cost recommendations Costfluent reads into **Savings**. Each gets the three Recommender viewer roles below. | `set(string)` | `[]` |
 | `carbon_dataset_id` | Dataset in `project_id` holding the Carbon Footprint export. Null grants nothing on it. | `string` | `null` |
+| `cud_dataset_id` | Dataset in `project_id` holding the committed use discount metadata export (Preview), a dataset of its own. Null grants nothing on it. | `string` | `null` |
 
 ## Outputs
 
@@ -111,7 +120,7 @@ up to three minutes while Costfluent reports the dataset as not yet shared.
 |------|-----------|-------------|
 | `credentials` | no | Map of `billing_account_id`, `project_id`, `bigquery_dataset`. |
 | `connection_json` | no | The same map as JSON. |
-| `settings` | no | `carbon_dataset` when `carbon_dataset_id` is set, for `costfluent_provider`; otherwise empty. |
+| `settings` | no | `carbon_dataset` when `carbon_dataset_id` is set and `cud_dataset` when `cud_dataset_id` is set, for `costfluent_provider`; otherwise empty. |
 | `billing_dataset_id` | no | Dataset the Costfluent service account was granted read access to. |
 | `recommender_project_ids` | no | Projects whose cost recommendations the Costfluent service account was granted read access to. |
 
@@ -123,6 +132,7 @@ authenticates: access comes from the dataset grant.
 - `roles/bigquery.dataViewer` on `billing_dataset_id` only, to the Costfluent service account. No
   other dataset in the project is readable, and Costfluent runs no job in your project.
 - `roles/bigquery.dataViewer` on `carbon_dataset_id`, only when you set it, for the same account.
+- `roles/bigquery.dataViewer` on `cud_dataset_id`, only when you set it, for the same account.
 - On each project in `recommender_project_ids`, and on none by default:
 
   | Role | Recommenders Costfluent reads with it |

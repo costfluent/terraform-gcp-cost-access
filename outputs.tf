@@ -12,6 +12,7 @@ locals {
   # The optional settings Costfluent accepts of a GCP connection, under the same contract.
   settings = {
     carbon_dataset = var.carbon_dataset_id
+    cud_dataset    = var.cud_dataset_id
   }
 }
 
@@ -26,7 +27,7 @@ output "connection_json" {
 }
 
 output "settings" {
-  description = "Settings for costfluent_provider: the carbon footprint dataset, when carbon_dataset_id is set."
+  description = "Settings for costfluent_provider: the carbon footprint dataset, when carbon_dataset_id is set, and the committed use discount metadata dataset, when cud_dataset_id is set."
   # A setting the module was not given is left out rather than sent empty.
   value = { for key, value in local.settings : key => value if value != null }
 }

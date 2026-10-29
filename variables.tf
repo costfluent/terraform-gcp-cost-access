@@ -29,6 +29,17 @@ variable "carbon_dataset_id" {
   }
 }
 
+variable "cud_dataset_id" {
+  description = "BigQuery dataset in project_id that the committed use discount metadata export (Preview) writes its cud_subscriptions_export table to, e.g. \"cud_metadata\". It is a dataset of its own, because Google's export setup says not to use an existing one, and enabling the export needs Billing Account Administrator. Null grants nothing on it and leaves Costfluent's committed use discount inventory empty for this billing account."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.cud_dataset_id == null || can(regex("^[a-zA-Z0-9_]+$", var.cud_dataset_id))
+    error_message = "Must be null or a valid BigQuery dataset ID (letters, digits and underscores)."
+  }
+}
+
 variable "billing_account_id" {
   description = "Cloud Billing account whose export the dataset holds, e.g. \"012345-ABCDEF-678901\"."
   type        = string
