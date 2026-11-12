@@ -53,3 +53,29 @@ run "an_invalid_carbon_dataset_is_refused" {
 
   expect_failures = [var.carbon_dataset_id]
 }
+
+# Two _iam_member resources for one (dataset, role, member) share one binding entry: deleting either
+# removes the member from the dataset, so the billing read would go when carbon_dataset_id is later
+# unset or moved.
+run "a_carbon_dataset_equal_to_the_billing_dataset_is_granted_once" {
+  command = plan
+
+  variables {
+    carbon_dataset_id = "billing_export"
+  }
+
+  assert {
+    condition     = length(google_bigquery_dataset_iam_member.carbon_data_viewer) == 0
+    error_message = "A carbon dataset that is the billing dataset must not be granted a second time."
+  }
+
+  assert {
+    condition     = google_bigquery_dataset_iam_member.bq_data_viewer.dataset_id == "billing_export"
+    error_message = "The billing dataset must still be granted."
+  }
+
+  assert {
+    condition     = output.settings.carbon_dataset == "billing_export"
+    error_message = "The settings output must still name the carbon dataset, so Costfluent reads carbon_footprint from it."
+  }
+}

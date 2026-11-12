@@ -2,20 +2,21 @@
 
 Grants [Costfluent](https://costfluent.com) read-only access to one GCP billing export and,
 optionally, to its Carbon Footprint and committed use discount metadata exports and to the cost
-recommendations of the projects you list.
+recommendations of the projects, folders or organization you list.
 
 Costfluent provisions a service account for your organization in its own project and runs the
 BigQuery queries there, at its own cost. This module grants that account **BigQuery Data Viewer**
 on your billing export dataset and, when you name them, on your Carbon Footprint and committed use
-discount metadata export datasets, and, on each project in `recommender_project_ids`, the Recommender
+discount metadata export datasets, and, on each project in `recommender_project_ids`, each folder in
+`recommender_folder_ids` and the organization in `recommender_organization_id`, the Recommender
 viewer roles for Compute, committed use discounts and Cloud SQL. No service account or key is
 created in your cloud, and no secret ever leaves it.
 
 ## Requirements
 
-- Terraform >= 1.13
+- Terraform >= 1.9 or OpenTofu >= 1.12, with the Google provider >= 8.0.0, < 9.0.0.
 - Permission to set IAM policy on the billing export dataset and, when you list any, on each
-  project in `recommender_project_ids`.
+  project, folder or organization the recommender inputs name.
 - A **Detailed usage cost** BigQuery billing export, in a US or EU multi-region dataset. Standard
   export does not carry the per-resource cost fields Costfluent needs. A dedicated project for the
   export is recommended. Enable it under **Billing → Billing export → BigQuery export**; it takes a
@@ -29,7 +30,8 @@ created in your cloud, and no secret ever leaves it.
    the `costfluent_gcp_service_account` resource with the Costfluent Terraform provider.
 3. Apply this module with that email, which grants it BigQuery Data Viewer on the dataset. To have
    Costfluent read the projects' cost recommendations into **Savings**, list them in
-   `recommender_project_ids`. To have Costfluent read the billing account's provider-reported
+   `recommender_project_ids`, or their folders in `recommender_folder_ids` or their organization in
+   `recommender_organization_id`. To have Costfluent read the billing account's provider-reported
    carbon footprint, export it to BigQuery (**Carbon Footprint → Export**) into a dataset in the same
    project and name that dataset in `carbon_dataset_id`. To have Costfluent list the billing
    account's spend-based committed use discounts, enable the committed use discount metadata export
@@ -50,12 +52,12 @@ provider "google" {
 
 module "costfluent" {
   source  = "costfluent/cost-access/gcp"
-  version = "~> 0.2"
+  version = "~> 0.5"
 
   project_id                       = "my-billing-project"
   billing_dataset_id               = "billing_export"
   billing_account_id               = "012345-ABCDEF-678901"
-  costfluent_service_account_email = "cfp-...@costfluent-prod-connect.iam.gserviceaccount.com"
+  costfluent_service_account_email = "cfp-aaaaaaaaaaaaaaaaaaaaaaaaaa@costfluent-prod-connect.iam.gserviceaccount.com"
 
   # Optional: read these projects' cost recommendations into Savings.
   recommender_project_ids = ["my-app-prod", "my-app-dev"]
@@ -72,6 +74,37 @@ Then enter the billing account ID, project and dataset in Costfluent > Integrati
 them back with `terraform output connection_json`, and the carbon and committed use discount
 datasets, when you set them, with `terraform output settings`.
 
+### Recommendations across a folder or organization
+
+Instead of listing projects, grant the Recommender viewer roles on folders or the whole
+organization, by numeric ID. Every project under them inherits the roles, including projects created
+later:
+
+```hcl
+provider "google" {
+  project = "my-billing-project"
+}
+
+module "costfluent" {
+  source  = "costfluent/cost-access/gcp"
+  version = "~> 0.5"
+
+  project_id                       = "my-billing-project"
+  billing_dataset_id               = "billing_export"
+  billing_account_id               = "012345-ABCDEF-678901"
+  costfluent_service_account_email = "cfp-aaaaaaaaaaaaaaaaaaaaaaaaaa@costfluent-prod-connect.iam.gserviceaccount.com"
+
+  # Optional: read the cost recommendations of every project under these folders, or under the
+  # whole organization.
+  recommender_folder_ids      = ["123456789012"]
+  recommender_organization_id = null
+}
+```
+
+Costfluent reads recommendations only for the projects that appear in the billing export's recent
+cost rows, at most 100 per connection, whichever inputs grant the roles. A grant on a folder or the
+organization lets the service account read the cost recommendations of every project under it.
+
 ### Terraform only
 
 With the Costfluent provider, the whole connection is one apply:
@@ -81,7 +114,7 @@ resource "costfluent_gcp_service_account" "this" {}
 
 module "costfluent" {
   source  = "costfluent/cost-access/gcp"
-  version = "~> 0.2"
+  version = "~> 0.5"
 
   project_id                       = "my-billing-project"
   billing_dataset_id               = "billing_export"
@@ -102,6 +135,10 @@ resource "costfluent_provider" "gcp" {
 A dataset grant takes a little while to propagate; `costfluent_provider` retries the connection for
 up to three minutes while Costfluent reports the dataset as not yet shared.
 
+Costfluent deletes its service account once no connection or Cloud Storage destination has used it
+for a while. `costfluent_gcp_service_account` provisions on every refresh, so the next plan creates
+the account again and this module grants it its roles again in the same apply.
+
 ## Inputs
 
 | Name | Description | Type | Default |
@@ -113,6 +150,8 @@ up to three minutes while Costfluent reports the dataset as not yet shared.
 | `recommender_project_ids` | Projects whose cost recommendations Costfluent reads into **Savings**. Each gets the three Recommender viewer roles below. | `set(string)` | `[]` |
 | `carbon_dataset_id` | Dataset in `project_id` holding the Carbon Footprint export. Null grants nothing on it. | `string` | `null` |
 | `cud_dataset_id` | Dataset in `project_id` holding the committed use discount metadata export (Preview), a dataset of its own. Null grants nothing on it. | `string` | `null` |
+| `recommender_folder_ids` | Numeric folder IDs whose projects' cost recommendations Costfluent reads; each folder gets the three Recommender viewer roles. | `set(string)` | `[]` |
+| `recommender_organization_id` | Numeric organization ID whose projects' cost recommendations Costfluent reads; it gets the three Recommender viewer roles. Null grants nothing on it. | `string` | `null` |
 
 ## Outputs
 
@@ -123,6 +162,8 @@ up to three minutes while Costfluent reports the dataset as not yet shared.
 | `settings` | no | `carbon_dataset` when `carbon_dataset_id` is set and `cud_dataset` when `cud_dataset_id` is set, for `costfluent_provider`; otherwise empty. |
 | `billing_dataset_id` | no | Dataset the Costfluent service account was granted read access to. |
 | `recommender_project_ids` | no | Projects whose cost recommendations the Costfluent service account was granted read access to. |
+| `recommender_folder_ids` | no | Folders whose projects' cost recommendations it was granted read access to. |
+| `recommender_organization_id` | no | Organization whose projects' cost recommendations it was granted read access to, or null. |
 
 The field names are Costfluent's contract. Do not rename them on the way in. None of them
 authenticates: access comes from the dataset grant.
@@ -133,7 +174,9 @@ authenticates: access comes from the dataset grant.
   other dataset in the project is readable, and Costfluent runs no job in your project.
 - `roles/bigquery.dataViewer` on `carbon_dataset_id`, only when you set it, for the same account.
 - `roles/bigquery.dataViewer` on `cud_dataset_id`, only when you set it, for the same account.
-- On each project in `recommender_project_ids`, and on none by default:
+- A dataset named in more than one of these inputs is granted once.
+- On each project in `recommender_project_ids`, each folder in `recommender_folder_ids` and the
+  organization in `recommender_organization_id`, and on none by default:
 
   | Role | Recommenders Costfluent reads with it |
   |---|---|
@@ -143,7 +186,23 @@ authenticates: access comes from the dataset grant.
 
   These are the narrowest predefined roles that cover those recommenders. They read
   recommendations and insights only, and change nothing. `roles/recommender.viewer` is not
-  granted: it would also expose the project's IAM, firewall and security insights.
+  granted: it would also expose the project's IAM, firewall and security insights. A folder or
+  organization grant is inherited by every project under it.
+
+## Upgrading to 0.5.0
+
+Before 0.5.0 a dataset named in two of `billing_dataset_id`, `carbon_dataset_id` and
+`cud_dataset_id` was granted twice, and removing either grant revoked both. 0.5.0 grants it once,
+so the first apply after upgrading destroys the duplicate grant, and that delete removes the shared
+member from the dataset:
+
+- a `carbon_dataset_id` or `cud_dataset_id` equal to `billing_dataset_id` loses Costfluent's
+  billing read;
+- a `cud_dataset_id` equal to `carbon_dataset_id` loses its carbon read.
+
+A second apply restores it. To avoid the gap, remove the duplicate from state before upgrading,
+with `terraform state rm 'module.<name>.google_bigquery_dataset_iam_member.carbon_data_viewer[0]'`
+(or `cud_data_viewer[0]`), which leaves the grant on the dataset.
 
 ## Upgrading from 0.1.x
 
@@ -161,8 +220,8 @@ authenticates: access comes from the dataset grant.
 
 - No credential is created, stored in state or handed to Costfluent.
 - Removing the module with `terraform destroy` revokes Costfluent's access completely. Removing a
-  project from `recommender_project_ids` revokes its three roles and leaves the project's other
-  bindings alone.
+  project from `recommender_project_ids`, a folder from `recommender_folder_ids` or the organization
+  from `recommender_organization_id` revokes its three roles and leaves its other bindings alone.
 
 ## License
 

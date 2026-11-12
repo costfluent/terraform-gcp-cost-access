@@ -1,0 +1,6 @@
+project_id                       = "my-billing-project"
+billing_dataset_id               = "billing_export"
+billing_account_id               = "012345-ABCDEF-678901"
+costfluent_service_account_email = "cfp-aaaaaaaaaaaaaaaaaaaaaaaaaa@costfluent-prod-connect.iam.gserviceaccount.com"
+recommender_folder_ids           = ["123456789012"]
+recommender_organization_id      = null
