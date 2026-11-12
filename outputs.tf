@@ -41,3 +41,13 @@ output "recommender_project_ids" {
   description = "Projects whose cost recommendations the Costfluent service account was granted read access to."
   value       = sort(distinct([for grant in google_project_iam_member.recommender_viewer : grant.project]))
 }
+
+output "recommender_folder_ids" {
+  description = "Folders whose projects' cost recommendations the Costfluent service account was granted read access to."
+  value       = sort(distinct([for grant in google_folder_iam_member.recommender_viewer : trimprefix(grant.folder, "folders/")]))
+}
+
+output "recommender_organization_id" {
+  description = "Organization whose projects' cost recommendations the Costfluent service account was granted read access to, or null."
+  value       = one(distinct([for grant in google_organization_iam_member.recommender_viewer : grant.org_id]))
+}

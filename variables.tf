@@ -70,3 +70,26 @@ variable "recommender_project_ids" {
     error_message = "Each entry must be a valid GCP project ID."
   }
 }
+
+variable "recommender_folder_ids" {
+  description = "Folders whose projects' cost recommendations Costfluent reads, by numeric folder ID. Each folder is granted the same three Recommender viewer roles, which every project under it inherits, including projects created later. Costfluent reads only the projects that appear in the billing export's recent cost rows. Empty grants nothing on a folder."
+  type        = set(string)
+  default     = []
+  nullable    = false
+
+  validation {
+    condition     = alltrue([for id in var.recommender_folder_ids : can(regex("^[0-9]{1,20}$", id))])
+    error_message = "Each entry must be a numeric folder ID, such as 123456789012, not folders/123456789012 or a display name."
+  }
+}
+
+variable "recommender_organization_id" {
+  description = "Organization whose projects' cost recommendations Costfluent reads, by numeric organization ID. The organization is granted the same three Recommender viewer roles, which every project in it inherits. Costfluent reads only the projects that appear in the billing export's recent cost rows. Null grants nothing on the organization."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.recommender_organization_id == null || can(regex("^[0-9]{1,20}$", var.recommender_organization_id))
+    error_message = "Must be null or a numeric organization ID, such as 123456789012, not organizations/123456789012 or a domain."
+  }
+}
